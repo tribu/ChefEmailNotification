@@ -1,0 +1,64 @@
+
+require 'net/smtp'
+require 'digest'
+require 'time'
+
+module BeFrank
+    class SendEmail < Chef::Handler
+        def report
+            now = ::Time.now.utc.iso8601
+            name = node.name
+
+            subject = "Good Chef run on #{name} @ #{now}"
+            message = "It's all good."
+
+            if failed?
+                subject = "Bad Chef run on #{name} @ #{now}"
+                message = [run_status.formatted_exception]
+                #message << Array(backtrace).join("\n")
+            end
+
+            send_email(
+                :subject => subject,
+                :body => message
+                )
+         end
+
+         def send_email options = {}
+             options[:subject] ||= 'Hello from Chef'
+             options[:body] ||= 'Sample BODY MESSAGE'
+             options[:from] ||= '<%= @ses_verified_email %>'
+             options[:from_alias] ||= 'Chef Client'
+             options[:to] ||=  '<%= @ses_verified_email %>'
+             options[:server] ||= 'email-smtp.us-west-2.amazonaws.com'
+             options[:ses_smtp_user] ||=  '<%= @smtpUserName %>'
+             options[:ses_smtp_pwd] ||=  '<%= @smtpPassword %>'
+
+             from = options[:from]
+             to   = options[:to]
+
+             message = <<-EOM
+             From: #{options[:from_alias]} <#{from}>
+             To: #{to}
+             Subject: #{options[:subject]}
+
+             #{options[:body]}
+             EOM
+
+             message = unindent message
+
+             conn = Net::SMTP.new  options[:server], 465
+             conn.enable_tls
+             conn.start options[:server], options[:ses_smtp_user],  options[:ses_smtp_pwd], :login
+             conn.send_message message, from, *to.split(/\s*,\s*/)
+         end
+
+
+         def unindent string
+             first = string[/\A\s*/]
+             string.gsub /^#{first}/, ''
+         end
+    end
+end
+
+

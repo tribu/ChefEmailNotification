@@ -1,2 +1,4 @@
-# ChefEmailNotification
-This uses AWS SES to send email notification when a chef run fails on a  node
+Make sure ses email id is set and the credentials are uploaded to chef encrypted databags.
+
+Modify the email id in the attributes file.
+Modify the ses credentials in recipues file.
